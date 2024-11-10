@@ -33,7 +33,7 @@ def load_all_velodyne_data(folder_path):
 
 if __name__ == "__main__":
     # Example usage for testing
-    folder_path = '/Users/virensasalu/Desktop/2011_09_26_drive_0009_extract/velodyne_points/data/'  
+    folder_path = './data/velodyne_points/data'  
     all_points = load_all_velodyne_data(folder_path)
     print(f"Loaded {len(all_points)} files.")
     print("Sample data from the first file:", list(all_points.items())[0])
@@ -41,47 +41,78 @@ if __name__ == "__main__":
 
 
 
+
 def load_calib_cam_to_cam(file_path):
     """
     Load camera calibration from calib_cam_to_cam.txt.
-    Returns P2 (projection matrix) and R0_rect (rectification matrix).
+    Returns P_rect_02 (projection matrix) and R_rect_02 (rectification matrix).
     """
     calib_data = {}
     with open(file_path, 'r') as f:
         for line in f:
-            if 'P2:' in line:
+            if 'P_rect_02:' in line:
                 calib_data['P2'] = np.array([float(x) for x in line.split()[1:]]).reshape(3, 4)
-            if 'R0_rect:' in line:
+            if 'R_rect_02:' in line:
                 calib_data['R0_rect'] = np.array([float(x) for x in line.split()[1:]]).reshape(3, 3)
     return calib_data
 
-def load_calib_velo_to_cam(file_path):
-    """
-    Load LiDAR to camera transformation from calib_velo_to_cam.txt.
-    Returns Tr_velo_to_cam matrix.
-    """
-    with open(file_path, 'r') as f:
-        for line in f:
-            if 'Tr_velo_to_cam:' in line:
-                Tr_velo_to_cam = np.array([float(x) for x in line.split()[1:]]).reshape(3, 4)
-                return {'Tr_velo_to_cam': Tr_velo_to_cam}
 
-# Optional: Load IMU to Velodyne transformation if you need IMU data
 def load_calib_imu_to_velo(file_path):
     """
     Load IMU to Velodyne transformation from calib_imu_to_velo.txt.
-    Returns Tr_imu_to_velo matrix.
+    Returns a dictionary with 'R' (rotation matrix) and 'T' (translation vector).
     """
+    calib_data = {}
     with open(file_path, 'r') as f:
         for line in f:
-            if 'Tr_imu_to_velo:' in line:
-                Tr_imu_to_velo = np.array([float(x) for x in line.split()[1:]]).reshape(3, 4)
-                return {'Tr_imu_to_velo': Tr_imu_to_velo}
-            
+            if line.startswith('R:'):
+                calib_data['R'] = np.array([float(x) for x in line.split()[1:]]).reshape(3, 3)
+            elif line.startswith('T:'):
+                calib_data['T'] = np.array([float(x) for x in line.split()[1:]]).reshape(3, 1)
+    return calib_data
 
-cam_to_cam_path = '/Users/virensasalu/Desktop/2011_09_26-10/calib_cam_to_cam.txt'
-velo_to_cam_path = '/Users/virensasalu/Desktop/2011_09_26-10/calib_velo_to_cam.txt'
-imu_to_velo_path = '/Users/virensasalu/Desktop/2011_09_26-10/calib_imu_to_velo.txt'  # Only if needed
 
-calib_cam = load_calib_cam_to_cam(cam_to_cam_path)
-calib_velo = load_calib_velo_to_cam(velo_to_cam_path)           
+def load_calib_velo_to_cam(file_path):
+    """
+    Load Velodyne to Camera transformation from calib_velo_to_cam.txt.
+    Returns Tr_velo_to_cam, a 3x4 transformation matrix.
+    """
+    R = None
+    T = None
+    with open(file_path, 'r') as f:
+        for line in f:
+            if line.startswith('R:'):
+                R = np.array([float(x) for x in line.split()[1:]]).reshape(3, 3)
+            elif line.startswith('T:'):
+                T = np.array([float(x) for x in line.split()[1:]]).reshape(3, 1)
+    
+    if R is not None and T is not None:
+        # Combine R and T into a 3x4 transformation matrix
+        Tr_velo_to_cam = np.hstack((R, T))
+        return {'Tr_velo_to_cam': Tr_velo_to_cam}
+    else:
+        raise ValueError("R or T matrix not found in the calibration file.")
+    
+    
+if __name__ == "__main__":
+    # Paths to calibration files
+    cam_to_cam_path = './data/calib/calib_cam_to_cam.txt'
+    velo_to_cam_path = './data/calib/calib_velo_to_cam.txt'
+    imu_to_velo_path = './data/calib/calib_imu_to_velo.txt'  # Optional for IMU data
+
+    # Load calibration data
+    calib_cam = load_calib_cam_to_cam(cam_to_cam_path)
+    calib_velo = load_calib_velo_to_cam(velo_to_cam_path)
+
+    # Load IMU to Velodyne calibration only if available
+    calib_imu = None
+    try:
+        calib_imu = load_calib_imu_to_velo(imu_to_velo_path)
+    except FileNotFoundError:
+        print("IMU to Velodyne calibration file not found; skipping.")
+
+    # Print loaded calibration data for verification
+    print("Camera Calibration (P2 and R0_rect):", calib_cam)
+    print("Velodyne to Camera Transformation (Tr_velo_to_cam):", calib_velo)
+    if calib_imu:
+        print("IMU to Velodyne Transformation (Tr_imu_to_velo):", calib_imu)
