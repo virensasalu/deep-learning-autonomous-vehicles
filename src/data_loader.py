@@ -1,17 +1,19 @@
 import os
 import numpy as np
 
-def load_velodyne_points_txt(file_path):
+
+def load_velodyne_points_bin(file_path):
     """
-    Load 3D point cloud data from a .txt file.
+    Load 3D point cloud data from a .bin file.
 
     Parameters:
-        file_path (str): Path to the Velodyne .txt file.
+        file_path (str): Path to the Velodyne .bin file.
 
     Returns:
+    
         np.ndarray: Array of points with each row as [x, y, z, intensity].
     """
-    point_cloud = np.loadtxt(file_path, dtype=np.float32)
+    point_cloud = np.fromfile(file_path, dtype=np.float32).reshape(-1, 4)
     return point_cloud
 
 def load_all_velodyne_data(folder_path):
@@ -19,26 +21,24 @@ def load_all_velodyne_data(folder_path):
     Load all Velodyne point cloud data from a specified folder.
 
     Parameters:
-        folder_path (str): Path to the folder containing Velodyne .txt files.
+        folder_path (str): Path to the folder containing Velodyne .bin files.
 
     Returns:
         dict: A dictionary where each key is a filename and each value is the loaded point cloud data.
     """
     velodyne_data = {}
     for filename in os.listdir(folder_path):
-        if filename.endswith(".txt"):
+        if filename.endswith(".bin"):
             file_path = os.path.join(folder_path, filename)
-            velodyne_data[filename] = load_velodyne_points_txt(file_path)
+            velodyne_data[filename] = load_velodyne_points_bin(file_path)
     return velodyne_data
 
-if __name__ == "__main__":
-    # Example usage for testing
-    folder_path = './data/velodyne_points/data'  
-    all_points = load_all_velodyne_data(folder_path)
-    print(f"Loaded {len(all_points)} files.")
-    print("Sample data from the first file:", list(all_points.items())[0])
-
-
+# if __name__ == "__main__":
+#     # Example usage for testing
+#     folder_path = './data/velodyne_points/data'  
+#     all_points = load_all_velodyne_data(folder_path)
+#     print(f"Loaded {len(all_points)} files.")
+#     print("Sample data from the first file:", list(all_points.items())[0])
 
 
 
@@ -93,26 +93,26 @@ def load_calib_velo_to_cam(file_path):
     else:
         raise ValueError("R or T matrix not found in the calibration file.")
     
-    
-if __name__ == "__main__":
-    # Paths to calibration files
-    cam_to_cam_path = './data/calib/calib_cam_to_cam.txt'
-    velo_to_cam_path = './data/calib/calib_velo_to_cam.txt'
-    imu_to_velo_path = './data/calib/calib_imu_to_velo.txt'  # Optional for IMU data
 
-    # Load calibration data
-    calib_cam = load_calib_cam_to_cam(cam_to_cam_path)
-    calib_velo = load_calib_velo_to_cam(velo_to_cam_path)
+# if __name__ == "__main__":
+#     # Paths to calibration files
+#     cam_to_cam_path = './data/calib/calib_cam_to_cam.txt'
+#     velo_to_cam_path = './data/calib/calib_velo_to_cam.txt'
+#     imu_to_velo_path = './data/calib/calib_imu_to_velo.txt'  # Optional for IMU data
 
-    # Load IMU to Velodyne calibration only if available
-    calib_imu = None
-    try:
-        calib_imu = load_calib_imu_to_velo(imu_to_velo_path)
-    except FileNotFoundError:
-        print("IMU to Velodyne calibration file not found; skipping.")
+#     # Load calibration data
+#     calib_cam = load_calib_cam_to_cam(cam_to_cam_path)
+#     calib_velo = load_calib_velo_to_cam(velo_to_cam_path)
 
-    # Print loaded calibration data for verification
-    print("Camera Calibration (P2 and R0_rect):", calib_cam)
-    print("Velodyne to Camera Transformation (Tr_velo_to_cam):", calib_velo)
-    if calib_imu:
-        print("IMU to Velodyne Transformation (Tr_imu_to_velo):", calib_imu)
+#     # Load IMU to Velodyne calibration only if available
+#     calib_imu = None
+#     try:
+#         calib_imu = load_calib_imu_to_velo(imu_to_velo_path)
+#     except FileNotFoundError:
+#         print("IMU to Velodyne calibration file not found; skipping.")
+
+#     # Print loaded calibration data for verification
+#     print("Camera Calibration (P2 and R0_rect):", calib_cam)
+#     print("Velodyne to Camera Transformation (Tr_velo_to_cam):", calib_velo)
+#     if calib_imu:
+#         print("IMU to Velodyne Transformation (Tr_imu_to_velo):", calib_imu)
